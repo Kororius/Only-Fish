@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- Permissions for camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" /> <!-- Permissions for accessing external storage (for saving images) -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" /> <!-- Permissions for accessing media (for saving images - scoped storage) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> <!-- Permissions for location (if you implement map functionality) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /> <!-- Permissions for internet access (if you need to upload files or use an API) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -12,6 +28,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OnlyFish"
         tools:targetApi="31">
+        <activity
+            android:name=".ResultActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
