@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-public class MainActivity extends AppCompatActivity implements HomeFragment.HomeFragmentListener, CameraFragment.CameraFragmentListener {
+public class MainActivity extends AppCompatActivity implements HomeFragment.HomeFragmentListener {
 
     private static final String TAG = "MainActivity";
 
@@ -39,18 +39,18 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
         System.out.println("Camera button clicked in MainActivity");
         loadFragment(new CameraFragment());
     }
-    @Override
-    public void onImageCaptured(Uri imageUri) {
-        if (imageUri != null) {
-            Log.d(TAG, "Image captured: " + imageUri);
-            // The Toast is removed here
-            onImageSelected(imageUri); // Call the new method
-        } else {
-            Log.e(TAG, "Image capture failed");
-            // The Toast is removed here
-            // Handle the failure if needed, e.g., navigate back or show an error in the UI
-        }
-    }
+//    @Override
+//    public void onImageCaptured(Uri imageUri) {
+//        if (imageUri != null) {
+//            Log.d(TAG, "Image captured: " + imageUri);
+//            // The Toast is removed here
+//            onImageSelected(imageUri); // Call the new method
+//        } else {
+//            Log.e(TAG, "Image capture failed");
+//            // The Toast is removed here
+//            // Handle the failure if needed, e.g., navigate back or show an error in the UI
+//        }
+//    }
 
     private void onImageSelected(Uri imageUri) {
         // TODO: Send image to API and get result

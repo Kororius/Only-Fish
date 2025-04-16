@@ -3,6 +3,7 @@ package com.example.onlyfish;
 import android.Manifest;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,7 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -24,12 +24,9 @@ import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-
 import com.google.common.util.concurrent.ListenableFuture;
-
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.Map;
@@ -43,50 +40,23 @@ public class CameraFragment extends Fragment {
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
     private ImageCapture imageCapture;
     private PreviewView viewFinder;
-    private ActivityResultLauncher<String[]> activityResultLauncher;
+    private ActivityResultLauncher<String[]> cameraPermissionLauncher;
+    private ActivityResultLauncher<String> galleryLauncher;
 
-    // Interface for communication with the hosting activity
-    public interface CameraFragmentListener {
-        void onImageCaptured(Uri imageUri);
-    }
-
-    private CameraFragmentListener listener;
-
-    @Override
-    public void onAttach(@NonNull Context context) {
-        super.onAttach(context);
-        if (context instanceof CameraFragmentListener) {
-            listener = (CameraFragmentListener) context;
-        } else {
-            throw new RuntimeException(context + " must implement CameraFragmentListener");
-        }
-    }
-
-
-    @Override
+    @Override // Removed CameraFragmentListener and its usage
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        activityResultLauncher = registerForActivityResult(
+        // Register for camera permission result
+        cameraPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestMultiplePermissions(),
-                result -> {
-                    boolean permissionGranted = true;
-                    for (Map.Entry<String, Boolean> entry : result.entrySet()) {
-                        if (entry.getKey().equals(Manifest.permission.CAMERA) && !entry.getValue()) {
-                            permissionGranted = false;
-                            break;
-                        }
-                    }
-                    if (!permissionGranted) {
-                        Toast.makeText(requireContext(), "Permission request denied", Toast.LENGTH_SHORT).show();
-                        // Consider informing the activity about the failure
-                        if (listener != null) {
-                            listener.onImageCaptured(null); // Or a specific error code/URI
-                        }
-                    } else {
-                        startCamera();
-                    }
-                }
+                this::handleCameraPermissionResult
+        );
+
+        // Register for gallery activity result
+        galleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                this::handleGalleryResult
         );
 
         if (allPermissionsGranted()) {
@@ -102,7 +72,9 @@ public class CameraFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_camera, container, false);
         viewFinder = view.findViewById(R.id.viewFinder);
         Button captureButton = view.findViewById(R.id.capture_button);
+        Button galleryButton = view.findViewById(R.id.gallery_button);
         captureButton.setOnClickListener(v -> takePhoto());
+        galleryButton.setOnClickListener(v -> launchGallery());
         return view;
     }
 
@@ -116,7 +88,23 @@ public class CameraFragment extends Fragment {
     }
 
     private void requestPermissions() {
-        activityResultLauncher.launch(REQUIRED_PERMISSIONS);
+        cameraPermissionLauncher.launch(REQUIRED_PERMISSIONS);
+    }
+
+    private void handleCameraPermissionResult(Map<String, Boolean> result) {
+        boolean permissionGranted = true;
+        for (Map.Entry<String, Boolean> entry : result.entrySet()) {
+            if (entry.getKey().equals(Manifest.permission.CAMERA) && !entry.getValue()) {
+                permissionGranted = false;
+                break;
+            }
+        }
+        if (permissionGranted) {
+            startCamera();
+        } else {
+            Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show();
+            // Handle the case where permission is denied (e.g., navigate back)
+        }
     }
 
     private void startCamera() {
@@ -141,10 +129,7 @@ public class CameraFragment extends Fragment {
 
             } catch (Exception e) {
                 Log.e(TAG, "Use case binding failed", e);
-                // Consider informing the activity about the failure
-                if (listener != null) {
-                    listener.onImageCaptured(null); // Or a specific error code/URI
-                }
+                // Handle camera setup failure (e.g., show error message)
             }
         }, ContextCompat.getMainExecutor(requireContext()));
     }
@@ -166,7 +151,6 @@ public class CameraFragment extends Fragment {
                         contentValues
                 ).build();
 
-
         imageCapture.takePicture(
                 outputOptions,
                 Executors.newSingleThreadExecutor(),
@@ -175,18 +159,11 @@ public class CameraFragment extends Fragment {
                     public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                         Uri savedUri = outputFileResults.getSavedUri();
                         if (savedUri != null) {
-                            String msg = "Photo capture succeeded: " + savedUri;
-                            Log.d(TAG, msg);
-                            // Notify the activity about the captured image
-                            if (listener != null) {
-                                listener.onImageCaptured(savedUri);
-                            }
+                            Log.d(TAG, "Photo capture succeeded: " + savedUri);
+                            handleCapturedImage(savedUri); // Call new method
                         } else {
                             Log.e(TAG, "Photo capture succeeded, but URI is null");
-                            // Notify the activity about the failure (even though it technically succeeded partially)
-                            if (listener != null) {
-                                listener.onImageCaptured(null); // Or a specific error code/URI
-                            }
+                            // Handle the case where the URI is null (optional)
                         }
                     }
 
@@ -194,18 +171,34 @@ public class CameraFragment extends Fragment {
                     public void onError(@NonNull ImageCaptureException exception) {
                         Log.e(TAG, "Photo capture failed: " + exception.getMessage(), exception);
                         Toast.makeText(requireContext(), "Photo capture failed: " + exception.getMessage(), Toast.LENGTH_SHORT).show();
-                        // Notify the activity about the failure
-                        if (listener != null) {
-                            listener.onImageCaptured(null); // Or a specific error code/URI
-                        }
+                        // Handle the case where photo capture failed (e.g., show error message)
                     }
                 }
         );
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        listener = null;
+    private void launchGallery() {
+        galleryLauncher.launch("image/*");
+    }
+
+    private void handleGalleryResult(Uri uri) {
+        if (uri != null) {
+            Log.d(TAG, "Image selected from gallery: " + uri);
+            handleCapturedImage(uri); // Call new method
+        } else {
+            Log.e(TAG, "No image selected from gallery");
+            // Handle the case where no image was selected (optional)
+        }
+    }
+
+    private void handleCapturedImage(Uri imageUri) { // New method
+        Log.d(TAG, "Image captured or selected: " + imageUri);
+        startRecognitionService(imageUri);
+    }
+
+    private void startRecognitionService(Uri imageUri) { // New method
+        Intent serviceIntent = new Intent(requireContext(), RecognitionService.class);
+        serviceIntent.putExtra("imageUri", imageUri.toString());
+        requireContext().startService(serviceIntent);
     }
 }

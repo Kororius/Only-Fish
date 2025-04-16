@@ -17,6 +17,8 @@ public class ResultActivity extends AppCompatActivity {
         // Get data from the intent
         String imageUriString = getIntent().getStringExtra("imageUri");
         String text = getIntent().getStringExtra("text");
+        String databaseId = getIntent().getStringExtra("databaseId"); // Example
+
 
         // Find views
         ImageView imageView = findViewById(R.id.result_image);
