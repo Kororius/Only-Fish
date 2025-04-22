@@ -32,7 +32,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
@@ -48,4 +47,5 @@ dependencies {
     implementation(libs.mysql.connector)
     implementation(libs.dotenv.kotlin)
     implementation(libs.osmdroid)
+    implementation(libs.itext7.core)
 }

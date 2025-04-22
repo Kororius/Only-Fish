@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
 
     @Override
     public void onCameraClick() {
-        System.out.println("Camera button clicked in MainActivity");
+        Log.d(TAG, "Camera button clicked in MainActivity");
         loadFragment(new CameraFragment());
     }
 
@@ -53,25 +53,25 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
 
     @Override
     public void onMapClick() {
-        System.out.println("Map button clicked in MainActivity");
-        loadFragment(new MapFragment()); // Load the MapFragment here
+        Log.d(TAG, "Map button clicked in MainActivity");
+        loadFragment(new MapFragment());
     }
 
     @Override
-    public void onStatisticsClick() { // Added
-        System.out.println("Statistics button clicked in MainActivity");
+    public void onStatisticsClick() {
+        Log.d(TAG, "Statistics button clicked in MainActivity");
         // TODO: Handle statistics button click (e.g., open statistics fragment/activity)
     }
 
     @Override
-    public void onFishingLicenseClick() { // Added
-        System.out.println("Fishing License button clicked in MainActivity");
-        // TODO: Handle fishing license button click (e.g., open fishing license fragment/activity)
+    public void onFishingLicenseClick() {
+        Log.d(TAG, "Fishing License button clicked in MainActivity");
+        loadFragment(new FishingLicenseFragment()); // Load the FishingLicenseFragment
     }
 
     @Override
-    public void onLogoutClick() { // Added
-        System.out.println("Logout button clicked in MainActivity");
+    public void onLogoutClick() {
+        Log.d(TAG, "Logout button clicked in MainActivity");
         // TODO: Handle logout button click (e.g., clear user session, navigate to login screen)
         // For example, to navigate to a login activity:
         // Intent intent = new Intent(this, LoginActivity.class);
