@@ -3,18 +3,36 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center">
+    android:padding="16dp">
 
     <Button
         android:id="@+id/camera_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Open Camera" />
+        android:text="Camera" />
 
     <Button
         android:id="@+id/map_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Open Map" />
+        android:text="Map" />
+
+    <Button
+        android:id="@+id/statistics_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Statistika" />
+
+    <Button
+        android:id="@+id/fishing_license_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Zvejo bilietas" />
+
+    <Button
+        android:id="@+id/logout_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Atsijungti" />
 
 </LinearLayout>

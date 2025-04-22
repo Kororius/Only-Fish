@@ -47,5 +47,5 @@ dependencies {
     implementation(libs.glide)
     implementation(libs.mysql.connector)
     implementation(libs.dotenv.kotlin)
-
+    implementation(libs.osmdroid)
 }

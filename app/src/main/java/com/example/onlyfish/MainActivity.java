@@ -35,22 +35,9 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
 
     @Override
     public void onCameraClick() {
-        // For now, let's just print a message to the console
         System.out.println("Camera button clicked in MainActivity");
         loadFragment(new CameraFragment());
     }
-//    @Override
-//    public void onImageCaptured(Uri imageUri) {
-//        if (imageUri != null) {
-//            Log.d(TAG, "Image captured: " + imageUri);
-//            // The Toast is removed here
-//            onImageSelected(imageUri); // Call the new method
-//        } else {
-//            Log.e(TAG, "Image capture failed");
-//            // The Toast is removed here
-//            // Handle the failure if needed, e.g., navigate back or show an error in the UI
-//        }
-//    }
 
     private void onImageSelected(Uri imageUri) {
         // TODO: Send image to API and get result
@@ -66,8 +53,29 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
 
     @Override
     public void onMapClick() {
-        // TODO: Handle map button click (e.g., open map fragment/activity)
-        // For now, let's just print a message to the console
         System.out.println("Map button clicked in MainActivity");
+        loadFragment(new MapFragment()); // Load the MapFragment here
+    }
+
+    @Override
+    public void onStatisticsClick() { // Added
+        System.out.println("Statistics button clicked in MainActivity");
+        // TODO: Handle statistics button click (e.g., open statistics fragment/activity)
+    }
+
+    @Override
+    public void onFishingLicenseClick() { // Added
+        System.out.println("Fishing License button clicked in MainActivity");
+        // TODO: Handle fishing license button click (e.g., open fishing license fragment/activity)
+    }
+
+    @Override
+    public void onLogoutClick() { // Added
+        System.out.println("Logout button clicked in MainActivity");
+        // TODO: Handle logout button click (e.g., clear user session, navigate to login screen)
+        // For example, to navigate to a login activity:
+        // Intent intent = new Intent(this, LoginActivity.class);
+        // startActivity(intent);
+        // finish(); // Close the main activity
     }
 }
