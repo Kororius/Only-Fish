@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+
 public class MainActivity extends AppCompatActivity implements HomeFragment.HomeFragmentListener {
 
     private static final String TAG = "MainActivity";
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.Home
     @Override
     public void onStatisticsClick() {
         Log.d(TAG, "Statistics button clicked in MainActivity");
-        // TODO: Handle statistics button click (e.g., open statistics fragment/activity)
+        loadFragment(new StatisticsFragment());
     }
 
     @Override
