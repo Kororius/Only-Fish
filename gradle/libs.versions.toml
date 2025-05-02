@@ -9,8 +9,6 @@ activity = "1.10.1"
 constraintlayout = "2.2.1"
 camerax = "1.4.2"
 glide = "4.16.0"
-mysql = "8.0.30"
-dotenv = "6.4.1"
 osmdroid = "6.1.17"
 itext = "7.2.5"
 
@@ -27,8 +25,6 @@ camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.r
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-mysql-connector = { module = "mysql:mysql-connector-java", version.ref = "mysql" }
-dotenv-kotlin = { module = "io.github.cdimascio:dotenv-kotlin", version.ref = "dotenv" }
 osmdroid = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
 itext7-core = { group = "com.itextpdf", name = "itext7-core", version.ref = "itext" }
 

@@ -20,6 +20,13 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"/>
 
+    <Button
+        android:id="@+id/back_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Go back"
+        android:layout_gravity="center_horizontal"/>
+
     <!-- EditText fields for manual entry -->
     <EditText
         android:id="@+id/license_number_edit_text"

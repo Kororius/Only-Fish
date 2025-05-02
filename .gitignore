@@ -14,3 +14,5 @@
 .cxx
 local.properties
 .env 
+**/api_endpoints.txt
+/.idea/dbnavigator.xml

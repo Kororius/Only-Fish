@@ -197,6 +197,7 @@ public class CameraFragment extends Fragment {
     }
 
     private void startRecognitionService(Uri imageUri) { // New method
+        //TODO: Start recognition service
         Intent serviceIntent = new Intent(requireContext(), RecognitionService.class);
         serviceIntent.putExtra("imageUri", imageUri.toString());
         requireContext().startService(serviceIntent);

@@ -23,6 +23,9 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.regex.Matcher;
@@ -30,16 +33,19 @@ import java.util.regex.Pattern;
 
 public class UpdateFishingLicenseFragment extends Fragment {
 
+    private static final String TAG = "UpdateFishingLicenseFragment";
     private static final int PICK_PDF_FILE = 2; // Request code for file picker
 
     private Button uploadPdfButton;
     private Button manualEntryButton;
+    private Button navigateBackButton;
     private EditText licenseNumberEditText;
     private EditText nameEditText;
     private EditText surnameEditText;
     private EditText personalIdEditText;
     private EditText expiryDateEditText;
     private Button saveButton;
+    private LambdaHelper lambdaHelper;
     private final ActivityResultLauncher<Intent> pickPdfLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
                     result -> {
@@ -59,8 +65,11 @@ public class UpdateFishingLicenseFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_update_fishing_license, container, false);
 
+        lambdaHelper = LambdaHelper.getInstance(requireContext());
+
         uploadPdfButton = view.findViewById(R.id.upload_pdf_button);
         manualEntryButton = view.findViewById(R.id.manual_entry_button);
+        navigateBackButton = view.findViewById(R.id.back_button);
         licenseNumberEditText = view.findViewById(R.id.license_number_edit_text);
         nameEditText = view.findViewById(R.id.name_edit_text);
         surnameEditText = view.findViewById(R.id.surname_edit_text);
@@ -79,6 +88,10 @@ public class UpdateFishingLicenseFragment extends Fragment {
             setManualEntryVisibility(true);
         });
 
+        navigateBackButton.setOnClickListener(v -> {
+            navigateBack();
+        });
+
         saveButton.setOnClickListener(v -> {
             // Get data from EditText fields
             String licenseNumber = licenseNumberEditText.getText().toString().trim();
@@ -89,11 +102,8 @@ public class UpdateFishingLicenseFragment extends Fragment {
 
             // TODO: Validate input (check for empty fields, correct formats, etc.)
 
-            // TODO: Save the data to the database
+            // Save the data to the database
             saveLicenseData(licenseNumber, name, surname, personalId, expiryDate);
-
-            // Navigate back to the FishingLicenseFragment or HomeFragment
-            navigateToFishingLicenseFragment(); // Or navigateToHome()
         });
 
         return view;
@@ -115,7 +125,7 @@ public class UpdateFishingLicenseFragment extends Fragment {
                     text.append(PdfTextExtractor.getTextFromPage(pdfDocument.getPage(i)));
                 }
                 pdfDocument.close();
-                extractDataFromPdf(text.toString());
+                extractDataAndSave(text.toString());
             } else {
                 Toast.makeText(requireContext(), "Could not open PDF file", Toast.LENGTH_SHORT).show();
             }
@@ -125,22 +135,22 @@ public class UpdateFishingLicenseFragment extends Fragment {
         }
     }
 
-    private void extractDataFromPdf(String pdfText) {
+    private void extractDataAndSave(String pdfText) {
         Log.d("PDF_TEXT", "Extracted PDF Text:\n" + pdfText);
 
         String licenseNumber = extractLicenseNumber(pdfText);
         String nameSurname = extractNameSurname(pdfText);
         String personalId = extractPersonalId(pdfText);
         String expiryDate = extractExpiryDate(pdfText);
-
-        // Display extracted data in a Toast
-        String message = "License Number: " + licenseNumber + "\n" +
-                "Name, Surname: " + nameSurname + "\n" +
-                "Personal ID: " + personalId + "\n" +
-                "Expiry Date: " + expiryDate;
-
-        // TODO: Store extracted data in the database
-        Log.d("PDF_EXTRACTION", message);
+        String[] parts = nameSurname.split(" ");
+        String name = "";
+        String surname = "";
+        if (parts.length >= 2) {
+            name = parts[0];
+            surname = parts[1];
+        }
+        // Save the data immediately
+        saveLicenseData(licenseNumber, name, surname, personalId, expiryDate);
     }
 
     private String extractLicenseNumber(String text) {
@@ -187,15 +197,55 @@ public class UpdateFishingLicenseFragment extends Fragment {
         personalIdEditText.setVisibility(visibility);
         expiryDateEditText.setVisibility(visibility);
         saveButton.setVisibility(visibility);
-        ((View) licenseNumberEditText.getParent()).requestLayout();
-    }
+        if (licenseNumberEditText.getParent() != null) {
+            ((View) licenseNumberEditText.getParent()).requestLayout();
+        }    }
 
     private void saveLicenseData(String licenseNumber, String name, String surname, String personalId, String expiryDate) {
-        // TODO: Implement database saving logic here
-        //  - Get user ID (if applicable)
-        //  - Create a database entry or update existing entry
-        //  - Handle potential errors
-        Toast.makeText(requireContext(), "Saving data (not implemented yet)", Toast.LENGTH_SHORT).show();
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("UserID", lambdaHelper.getUserId());
+            requestBody.put("LicenseNumber", licenseNumber);
+            requestBody.put("Name", name);
+            requestBody.put("Surname", surname);
+            requestBody.put("PersonalID", personalId);
+            requestBody.put("ExpiryDate", expiryDate);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);
+            Toast.makeText(requireContext(), "Error creating request", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        lambdaHelper.sendRequestToLambda(LambdaHelper.LambdaFunction.POST_LICENCE, requestBody, new LambdaHelper.LambdaResponseListener() {
+            @Override
+            public void onResponse(String response) {
+                Log.d(TAG, "License save response: " + response);
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+                    // Directly access the "message" key
+                    if (jsonResponse.has("message")) {
+                        String message = jsonResponse.getString("message");
+                        if (message.contains("HasLicense flag updated")) {
+                            lambdaHelper.setHasLicense(1);
+                        }
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                        navigateToFishingLicenseFragment();
+                    } else {
+                        Log.e(TAG, "Invalid response format: missing 'message'");
+                        Toast.makeText(getContext(), "Error: Invalid response format", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error parsing JSON response: " + e.getMessage(), e);
+                    Toast.makeText(requireContext(), "Error parsing response", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error saving license: " + error);
+                Toast.makeText(requireContext(), "Error saving license", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void navigateToFishingLicenseFragment() {
@@ -203,6 +253,13 @@ public class UpdateFishingLicenseFragment extends Fragment {
         if (getActivity() != null) {
             FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
             fragmentManager.popBackStack();
+        }
+    }
+
+    private void navigateBack() {
+        if (getActivity() != null) {
+            FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+            fragmentManager.popBackStack(); 
         }
     }
 }

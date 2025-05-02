@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -10,7 +11,8 @@
         android:layout_height="wrap_content"
         android:text="License Number: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/name_text_view"
@@ -18,7 +20,8 @@
         android:layout_height="wrap_content"
         android:text="Name: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/surname_text_view"
@@ -26,7 +29,8 @@
         android:layout_height="wrap_content"
         android:text="Surname: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/personal_id_text_view"
@@ -34,7 +38,8 @@
         android:layout_height="wrap_content"
         android:text="Personal ID: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/expiry_date_text_view"
@@ -42,7 +47,8 @@
         android:layout_height="wrap_content"
         android:text="Expiry Date: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"/>
 
     <Button
         android:id="@+id/update_license_button"
@@ -50,7 +56,16 @@
         android:layout_height="wrap_content"
         android:text="Update License"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
+    <Button
+        android:id="@+id/add_license_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add License"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <Button
         android:id="@+id/home_button"

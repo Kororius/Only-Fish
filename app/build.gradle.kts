@@ -44,8 +44,6 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation(libs.glide)
-    implementation(libs.mysql.connector)
-    implementation(libs.dotenv.kotlin)
     implementation(libs.osmdroid)
     implementation(libs.itext7.core)
 }

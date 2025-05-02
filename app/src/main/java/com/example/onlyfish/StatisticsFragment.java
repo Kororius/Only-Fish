@@ -3,18 +3,20 @@ package com.example.onlyfish;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.RadioButton;
+import android.widget.EditText;
 import android.widget.RadioGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,11 +37,14 @@ public class StatisticsFragment extends Fragment {
         OVERALL
     }
 
+    private static final String TAG = "StatisticsFragment";
+
     private RecyclerView recyclerView;
     private StatisticsAdapter adapter;
     private RadioGroup timeRangeRadioGroup;
     private Button addRecordButton;
-    private DatabaseHelper databaseHelper;
+    private Button homeButton;
+    private LambdaHelper lambdaHelper;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler mainThreadHandler = new Handler(Looper.getMainLooper());
 
@@ -51,13 +56,14 @@ public class StatisticsFragment extends Fragment {
         recyclerView = view.findViewById(R.id.statisticsRecyclerView);
         timeRangeRadioGroup = view.findViewById(R.id.timeRangeRadioGroup);
         addRecordButton = view.findViewById(R.id.addRecordButton);
+        homeButton = view.findViewById(R.id.home_button);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new StatisticsAdapter(new ArrayList<>()); // Initialize with an empty list
         recyclerView.setAdapter(adapter);
 
         // Initialize the database helper
-        databaseHelper = new DatabaseHelper();
+        lambdaHelper = LambdaHelper.getInstance(requireContext());
 
         // Set up time range selection
         timeRangeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -70,16 +76,12 @@ public class StatisticsFragment extends Fragment {
             loadStatistics(timeRange);
         });
 
-        // Set up add record button
-        addRecordButton.setOnClickListener(v -> {
-            // Navigate to MapFragment
-            MapFragment fragment = new MapFragment();
-            FragmentManager fragmentManager = requireActivity().getSupportFragmentManager();
-            FragmentTransaction transaction = fragmentManager.beginTransaction();
-            transaction.replace(R.id.fragment_container, fragment);
-            transaction.addToBackStack(null);
-            transaction.commit();
-        });
+
+        addRecordButton.setOnClickListener(v -> showAddRecordDialog());
+
+
+        homeButton.setOnClickListener(v -> navigateToHome());
+
 
         // Load initial statistics (Overall)
         loadStatistics(TimeRange.OVERALL);
@@ -88,12 +90,12 @@ public class StatisticsFragment extends Fragment {
     }
 
     private void loadStatistics(TimeRange timeRange) {
-        executorService.execute(() -> {
-            // Get data from remote database
-            List<Map<String, Object>> records = databaseHelper.getAllRecords();
-            List<Map<String, Object>> statistics = calculateStatistics(records, timeRange);
-            mainThreadHandler.post(() -> adapter.updateData(statistics));
-        });
+//        executorService.execute(() -> {
+//            // Get data from remote database
+//            List<Map<String, Object>> records = lambdaHelper.getAllRecords();
+//            List<Map<String, Object>> statistics = calculateStatistics(records, timeRange);
+//            mainThreadHandler.post(() -> adapter.updateData(statistics));
+//        });
     }
 
     private List<Map<String, Object>> calculateStatistics(List<Map<String, Object>> records, TimeRange timeRange) {
@@ -102,20 +104,20 @@ public class StatisticsFragment extends Fragment {
             case LAST_MONTH:
                 YearMonth lastMonth = YearMonth.now().minusMonths(1);
                 for (Map<String, Object> record : records) {
-                    LocalDate recordDate = (LocalDate) record.get("date");
-                    YearMonth recordYearMonth = YearMonth.from(recordDate);
-                    if (recordYearMonth.equals(lastMonth)) {
-                        filteredRecords.add(record);
-                    }
+                    //LocalDate recordDate = (LocalDate) record.get("date");
+                    //YearMonth recordYearMonth = YearMonth.from(recordDate);
+                    //if (recordYearMonth.equals(lastMonth)) {
+                    //    filteredRecords.add(record);
+                    //}
                 }
                 break;
             case LAST_YEAR:
                 LocalDate lastYear = LocalDate.now().minusYears(1);
                 for (Map<String, Object> record : records) {
-                    LocalDate recordDate = (LocalDate) record.get("date");
-                    if (recordDate.isAfter(lastYear)) {
-                        filteredRecords.add(record);
-                    }
+                    //LocalDate recordDate = (LocalDate) record.get("date");
+                    //if (recordDate.isAfter(lastYear)) {
+                    //    filteredRecords.add(record);
+                    //}
                 }
                 break;
             case OVERALL:
@@ -159,5 +161,82 @@ public class StatisticsFragment extends Fragment {
         }
 
         return statistics;
+    }
+
+    private void showAddRecordDialog() {
+        // Inflate the custom layout for the dialog
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_pin, null);
+
+        // Find the views in the dialog layout
+        EditText waterBodyEditText = dialogView.findViewById(R.id.water_body_edit_text);
+        EditText fishCaughtEditText = dialogView.findViewById(R.id.fish_caught_edit_text);
+        EditText biggestFishEditText = dialogView.findViewById(R.id.biggest_fish_edit_text);
+
+        // Create the AlertDialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setView(dialogView);
+        builder.setTitle("Add New Record");
+
+        // Set the positive button (Add)
+        builder.setPositiveButton("Add", (dialog, which) -> {
+            // Get the values from the input fields
+            String waterBody = waterBodyEditText.getText().toString().trim();
+            String fishCaughtStr = fishCaughtEditText.getText().toString().trim();
+            String biggestFishStr = biggestFishEditText.getText().toString().trim();
+
+            // Validate required fields
+            int fishCaught = 0;
+            if (!fishCaughtStr.isEmpty()) {
+                try {
+                    fishCaught = Integer.parseInt(fishCaughtStr);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(requireContext(), "Invalid number for 'Fish Caught'.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            double biggestFish = 0.0;
+            if (!biggestFishStr.isEmpty()) {
+                try {
+                    biggestFish = Double.parseDouble(biggestFishStr);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(requireContext(), "Invalid number for 'Biggest Fish'.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            // TODO: Save the data to the database (including user ID, location, and other details)
+            saveRecordData(waterBody, fishCaught, biggestFish);
+
+            Toast.makeText(requireContext(), "Pin added successfully!", Toast.LENGTH_SHORT).show();
+        });
+
+        // Set the negative button (Cancel)
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        // Show the dialog
+        builder.show();
+    }
+
+    private void saveRecordData(String waterBody, int fishCaught, double biggestFish) {
+        // TODO: Implement the database saving logic here
+        // You'll need to:
+        // 1. Get the user ID (if you have user authentication)
+        // 2. Create a database entry with the provided data (water body, fish caught, biggest fish)
+        // 3. Handle potential errors during the database operation
+
+        // Example (replace with your actual database logic):
+        Log.d(TAG,"WaterBody=" + waterBody + ", FishCaught=" +
+                fishCaught + ", BiggestFish=" + biggestFish);
+
+        // For now, just show a toast message
+        Toast.makeText(requireContext(), "Data saved (simulated).", Toast.LENGTH_SHORT).show();
+    }
+
+    private void navigateToHome() {
+        if (getActivity() != null) {
+            FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+            fragmentManager.popBackStack(); // This will remove the MapFragment from the stack and reveal the HomeFragment
+        }
     }
 }
