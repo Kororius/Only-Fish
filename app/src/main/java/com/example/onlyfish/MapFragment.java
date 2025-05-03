@@ -15,12 +15,14 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.util.GeoPoint;
@@ -29,12 +31,14 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Overlay;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class MapFragment extends Fragment {
 
     private MapView map;
     private static final String TAG = "MapFragment";
     private GeoPoint currentMapCenter;
+    private LambdaHelper lambdaHelper;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -73,7 +77,56 @@ public class MapFragment extends Fragment {
         Button homeButton = view.findViewById(R.id.home_button);
         homeButton.setOnClickListener(v -> navigateToHome());
 
+        lambdaHelper = LambdaHelper.getInstance(requireContext());
+        fetchPinsFromAWS();
+
         return view;
+    }
+
+    private void fetchPinsFromAWS() {
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("UserID", lambdaHelper.getUserId());
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);
+            Toast.makeText(requireContext(), "Error creating request", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        lambdaHelper.sendRequestToLambda(LambdaHelper.LambdaFunction.GET_PINS, requestBody, new LambdaHelper.LambdaResponseListener() {
+            @Override
+            public void onResponse(String response) {
+                Log.d(TAG, "GET_PINS response: " + response);
+                try {
+                    JSONArray jsonArray = new JSONArray(response);
+                    List<PinData> pinDataList = new ArrayList<>();
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+                        String pinName = jsonObject.getString("PinName");
+                        double latitude = jsonObject.getDouble("Latitude");
+                        double longitude = jsonObject.getDouble("Longitude");
+                        pinDataList.add(new PinData(pinName, latitude, longitude));
+                    }
+                    addMarkersFromPinData(pinDataList);
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error parsing JSON response: " + e.getMessage(), e);
+                    Toast.makeText(requireContext(), "Error parsing response", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error fetching pins: " + error);
+                Toast.makeText(requireContext(), "Error fetching pins", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void addMarkersFromPinData(List<PinData> pinDataList) {
+        for (PinData pinData : pinDataList) {
+            GeoPoint location = new GeoPoint(pinData.getLatitude(), pinData.getLongitude());
+            addMarkerOnMap(pinData.getPinName(), location);
+        }
     }
 
     private void addCenterDot() {
@@ -161,7 +214,7 @@ public class MapFragment extends Fragment {
             // Add the marker to the map
             addMarkerOnMap(pinName, currentMapCenter);
 
-            // TODO: Save the data to the database (including user ID, location, and other details)
+            // Save the data to the database (including user ID, location, and other details)
             savePinData(pinName, waterBody, fishCaught, biggestFish, currentMapCenter);
 
             Toast.makeText(requireContext(), "Pin added successfully!", Toast.LENGTH_SHORT).show();
@@ -175,22 +228,55 @@ public class MapFragment extends Fragment {
     }
 
     private void savePinData(String pinName, String waterBody, int fishCaught, double biggestFish, GeoPoint location) {
-        // TODO: Implement the database saving logic here
-        // You'll need to:
-        // 1. Get the user ID (if you have user authentication)
-        // 2. Create a database entry with the provided data (pin name, water body, fish caught, biggest fish, location coordinates)
-        // 3. Handle potential errors during the database operation
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("UserID", lambdaHelper.getUserId());
+            requestBody.put("WaterBodyName", waterBody);
+            requestBody.put("PinName", pinName); // PinName is now required
+            requestBody.put("FishCaught", fishCaught);
+            requestBody.put("BiggestFish", biggestFish);
 
-        // Example (replace with your actual database logic):
-        Log.d(TAG, "Saving pin data: Name=" + pinName + ", WaterBody=" + waterBody +
-                ", FishCaught=" + fishCaught + ", BiggestFish=" + biggestFish +
-                ", Location=" + location.getLatitude() + ", " + location.getLongitude());
+            // Add Latitude and Longitude if they are valid
+            if (location != null) {
+                requestBody.put("Latitude", location.getLatitude());
+                requestBody.put("Longitude", location.getLongitude());
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);
+            Toast.makeText(requireContext(), "Error creating request", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // For now, just show a toast message
-        Toast.makeText(requireContext(), "Data saved (simulated).", Toast.LENGTH_SHORT).show();
+        lambdaHelper.sendRequestToLambda(LambdaHelper.LambdaFunction.POST_WATER_BODIES_AND_PINS, requestBody, new LambdaHelper.LambdaResponseListener() {
+            @Override
+            public void onResponse(String response) {
+                Log.d(TAG, "POST_WATER_BODIES_AND_PINS response: " + response);
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+                    if (jsonResponse.has("message")) {
+                        String message = jsonResponse.getString("message");
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Log.e(TAG, "Invalid response format: missing 'message'");
+                        Toast.makeText(getContext(), "Error: Invalid response format", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error parsing JSON response: " + e.getMessage(), e);
+                    Toast.makeText(requireContext(), "Error parsing response", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error saving pin: " + error);
+                Toast.makeText(requireContext(), "Error saving pin", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    // Method to navigate back to the HomeFragment
+
+
+// Method to navigate back to the HomeFragment
     private void navigateToHome() {
         if (getActivity() != null) {
             FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
@@ -225,5 +311,29 @@ public class MapFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         map = null;
+    }
+
+    private static class PinData {
+        private final String pinName;
+        private final double latitude;
+        private final double longitude;
+
+        public PinData(String pinName, double latitude, double longitude) {
+            this.pinName = pinName;
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        public String getPinName() {
+            return pinName;
+        }
+
+        public double getLatitude() {
+            return latitude;
+        }
+
+        public double getLongitude() {
+            return longitude;
+        }
     }
 }

@@ -41,7 +41,8 @@ public class LambdaHelper {
         GET_LICENCE,
         POST_LOGINS,
         POST_WATER_BODIES_AND_PINS,
-        POST_LICENCE
+        POST_LICENCE,
+        GET_PINS
     }
 
     public interface LambdaResponseListener {
