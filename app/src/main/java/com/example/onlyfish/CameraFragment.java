@@ -5,15 +5,19 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -26,7 +30,17 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+
 import com.google.common.util.concurrent.ListenableFuture;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.Map;
@@ -42,8 +56,9 @@ public class CameraFragment extends Fragment {
     private PreviewView viewFinder;
     private ActivityResultLauncher<String[]> cameraPermissionLauncher;
     private ActivityResultLauncher<String> galleryLauncher;
+    private LambdaHelper lambdaHelper;
 
-    @Override // Removed CameraFragmentListener and its usage
+    @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -64,6 +79,7 @@ public class CameraFragment extends Fragment {
         } else {
             requestPermissions();
         }
+        lambdaHelper = LambdaHelper.getInstance(requireContext());
     }
 
     @Nullable
@@ -193,13 +209,90 @@ public class CameraFragment extends Fragment {
 
     private void handleCapturedImage(Uri imageUri) { // New method
         Log.d(TAG, "Image captured or selected: " + imageUri);
-        startRecognitionService(imageUri);
+        sendImageToAWS(imageUri);
     }
 
-    private void startRecognitionService(Uri imageUri) { // New method
-        //TODO: Start recognition service
-        Intent serviceIntent = new Intent(requireContext(), RecognitionService.class);
-        serviceIntent.putExtra("imageUri", imageUri.toString());
-        requireContext().startService(serviceIntent);
+    private void sendImageToAWS(Uri imageUri) {
+        String base64Image = convertImageUriToBase64(imageUri);
+        if (base64Image == null) {
+            Toast.makeText(requireContext(), "Error converting image", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("body", base64Image);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);
+            Toast.makeText(requireContext(), "Error creating request", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        lambdaHelper.sendRequestToLambda(LambdaHelper.LambdaFunction.GET_FISH_RULES, requestBody, new LambdaHelper.LambdaResponseListener() {
+            @Override
+            public void onResponse(String response) {
+                Log.d(TAG, "GET_FISH_RULES response: " + response);
+                try {
+                    JSONArray jsonArray = new JSONArray(response);
+                    if (jsonArray.length() > 0) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(0);
+                        String fishName = jsonObject.getString("FishName");
+                        double minLength = jsonObject.getDouble("MinLength");
+                        double maxLength = jsonObject.getDouble("MaxLength");
+                        String startDate = jsonObject.getString("StartDate");
+                        String endDate = jsonObject.getString("EndDate");
+                        int isBannedForever = jsonObject.getInt("IsBannedForever");
+                        String createdAt = jsonObject.getString("CreatedAt");
+
+                        Intent resultIntent = new Intent(requireContext(), ResultActivity.class);
+                        resultIntent.putExtra("imageUri", imageUri.toString());
+                        resultIntent.putExtra("fishName", fishName);
+                        resultIntent.putExtra("minLength", minLength);
+                        resultIntent.putExtra("maxLength", maxLength);
+                        resultIntent.putExtra("startDate", startDate);
+                        resultIntent.putExtra("endDate", endDate);
+                        resultIntent.putExtra("isBannedForever", isBannedForever);
+                        resultIntent.putExtra("createdAt", createdAt);
+                        startActivity(resultIntent);
+                    } else {
+                        Log.e(TAG, "No rules found for the fish");
+                        Toast.makeText(requireContext(), "No rules found for the fish", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error parsing JSON response: " + e.getMessage(), e);
+                    Toast.makeText(requireContext(), "Error parsing response", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error sending image to AWS: " + error);
+                Toast.makeText(requireContext(), "Error sending image", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private String convertImageUriToBase64(Uri imageUri) {
+        //TODO fix converting photo to base64 and sending to API
+        try {
+            InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            // Compress the bitmap to JPEG format with 100% quality
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+            String base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT);
+            Log.d(TAG, "Base64 Image Length: " + base64Image.length()); // Print the length
+//            Log.d(TAG, "Base64 Image: " + base64Image);
+            byteArrayOutputStream.close(); // Close the stream
+            inputStream.close();
+            return base64Image;
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "Error converting image to Base64: " + e.getMessage(), e);
+            return null;
+        } catch (IOException e) {
+            Log.e(TAG, "Error closing streams: " + e.getMessage(), e);
+            return null;
+        }
     }
 }
