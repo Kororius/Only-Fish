@@ -38,7 +38,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -213,29 +215,18 @@ public class CameraFragment extends Fragment {
     }
 
     private void sendImageToAWS(Uri imageUri) {
-        String base64Image = convertImageUriToBase64(imageUri);
-        if (base64Image == null) {
-            Toast.makeText(requireContext(), "Error converting image", Toast.LENGTH_SHORT).show();
+        byte[] imageData = convertImageUriToByteArray(imageUri);
+        if (imageData == null) {
+            Toast.makeText(requireContext(), "Error converting image to byte array", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        JSONObject requestBody = new JSONObject();
-        try {
-            requestBody.put("body", base64Image);
-        } catch (JSONException e) {
-            Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);
-            Toast.makeText(requireContext(), "Error creating request", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        lambdaHelper.sendRequestToLambda(LambdaHelper.LambdaFunction.GET_FISH_RULES, requestBody, new LambdaHelper.LambdaResponseListener() {
+        lambdaHelper.sendImageToLambda(LambdaHelper.LambdaFunction.GET_FISH_RULES, imageData, new LambdaHelper.LambdaResponseListener() {
             @Override
             public void onResponse(String response) {
                 Log.d(TAG, "GET_FISH_RULES response: " + response);
                 try {
-                    JSONArray jsonArray = new JSONArray(response);
-                    if (jsonArray.length() > 0) {
-                        JSONObject jsonObject = jsonArray.getJSONObject(0);
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (jsonObject.length() > 0) {
                         String fishName = jsonObject.getString("FishName");
                         double minLength = jsonObject.getDouble("MinLength");
                         double maxLength = jsonObject.getDouble("MaxLength");
@@ -272,26 +263,21 @@ public class CameraFragment extends Fragment {
         });
     }
 
-    private String convertImageUriToBase64(Uri imageUri) {
-        //TODO fix converting photo to base64 and sending to API
+    private byte[] convertImageUriToByteArray(Uri imageUri) {
         try {
             InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            // Compress the bitmap to JPEG format with 100% quality
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-            byte[] byteArray = byteArrayOutputStream.toByteArray();
-            String base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT);
-            Log.d(TAG, "Base64 Image Length: " + base64Image.length()); // Print the length
-//            Log.d(TAG, "Base64 Image: " + base64Image);
-            byteArrayOutputStream.close(); // Close the stream
+            ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+            int bufferSize = 1024;
+            byte[] buffer = new byte[bufferSize];
+
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                byteBuffer.write(buffer, 0, len);
+            }
             inputStream.close();
-            return base64Image;
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "Error converting image to Base64: " + e.getMessage(), e);
-            return null;
+            return byteBuffer.toByteArray();
         } catch (IOException e) {
-            Log.e(TAG, "Error closing streams: " + e.getMessage(), e);
+            Log.e(TAG, "Error converting image to byte array: " + e.getMessage(), e);
             return null;
         }
     }

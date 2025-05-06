@@ -129,6 +129,72 @@ public class LambdaHelper {
         });
     }
 
+    public void sendImageToLambda(LambdaFunction function, byte[] imageData, LambdaResponseListener listener) {
+        executorService.submit(() -> {
+            HttpURLConnection urlConnection = null;
+            try {
+                // Determine the correct Lambda URL based on the function
+                String lambdaUrl = getLambdaUrl(function);
+                if (lambdaUrl == null) {
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        listener.onError("Invalid Lambda function specified.");
+                    });
+                    return;
+                }
+
+                URL url = new URL(lambdaUrl);
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Content-Type", "application/octet-stream"); // Or "image/jpeg"
+                urlConnection.setDoOutput(true);
+
+                // Send the image data
+                OutputStream os = urlConnection.getOutputStream();
+                os.write(imageData);
+                os.close();
+
+                // Get the response
+                int responseCode = urlConnection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    Log.d(TAG, "Lambda HTTP IS OKKK!!!!");
+                    BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+                    in.close();
+
+                    // Notify the listener on the main thread
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        listener.onResponse(response.toString());
+                    });
+                } else {
+                    // Handle error response
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(urlConnection.getErrorStream()));
+                    StringBuilder errorResponse = new StringBuilder();
+                    String errorLine;
+                    while ((errorLine = errorReader.readLine()) != null) {
+                        errorResponse.append(errorLine);
+                    }
+                    errorReader.close();
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        listener.onError("HTTP error code: " + responseCode + " - " + errorResponse.toString());
+                    });
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Error sending request to Lambda: " + e.getMessage(), e);
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    listener.onError("Error sending request to Lambda: " + e.getMessage());
+                });
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+            }
+        });
+    }
+
     private String getLambdaUrl(LambdaFunction function) {
         return lambdaUrls.get(function);
     }
