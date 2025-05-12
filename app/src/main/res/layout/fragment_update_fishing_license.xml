@@ -53,14 +53,6 @@
         android:visibility="gone"/> <!-- Initially hidden -->
 
     <EditText
-        android:id="@+id/personal_id_edit_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Personal ID"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"/> <!-- Initially hidden -->
-
-    <EditText
         android:id="@+id/expiry_date_edit_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

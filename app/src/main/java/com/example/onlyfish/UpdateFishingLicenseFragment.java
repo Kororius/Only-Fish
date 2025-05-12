@@ -42,7 +42,6 @@ public class UpdateFishingLicenseFragment extends Fragment {
     private EditText licenseNumberEditText;
     private EditText nameEditText;
     private EditText surnameEditText;
-    private EditText personalIdEditText;
     private EditText expiryDateEditText;
     private Button saveButton;
     private LambdaHelper lambdaHelper;
@@ -73,7 +72,6 @@ public class UpdateFishingLicenseFragment extends Fragment {
         licenseNumberEditText = view.findViewById(R.id.license_number_edit_text);
         nameEditText = view.findViewById(R.id.name_edit_text);
         surnameEditText = view.findViewById(R.id.surname_edit_text);
-        personalIdEditText = view.findViewById(R.id.personal_id_edit_text);
         expiryDateEditText = view.findViewById(R.id.expiry_date_edit_text);
         saveButton = view.findViewById(R.id.save_button);
 
@@ -97,13 +95,12 @@ public class UpdateFishingLicenseFragment extends Fragment {
             String licenseNumber = licenseNumberEditText.getText().toString().trim();
             String name = nameEditText.getText().toString().trim();
             String surname = surnameEditText.getText().toString().trim();
-            String personalId = personalIdEditText.getText().toString().trim();
             String expiryDate = expiryDateEditText.getText().toString().trim();
 
             // TODO: Validate input (check for empty fields, correct formats, etc.)
 
             // Save the data to the database
-            saveLicenseData(licenseNumber, name, surname, personalId, expiryDate);
+            saveLicenseData(licenseNumber, name, surname, expiryDate);
         });
 
         return view;
@@ -140,7 +137,6 @@ public class UpdateFishingLicenseFragment extends Fragment {
 
         String licenseNumber = extractLicenseNumber(pdfText);
         String nameSurname = extractNameSurname(pdfText);
-        String personalId = extractPersonalId(pdfText);
         String expiryDate = extractExpiryDate(pdfText);
         String[] parts = nameSurname.split(" ");
         String name = "";
@@ -150,7 +146,7 @@ public class UpdateFishingLicenseFragment extends Fragment {
             surname = parts[1];
         }
         // Save the data immediately
-        saveLicenseData(licenseNumber, name, surname, personalId, expiryDate);
+        saveLicenseData(licenseNumber, name, surname, expiryDate);
     }
 
     private String extractLicenseNumber(String text) {
@@ -171,14 +167,6 @@ public class UpdateFishingLicenseFragment extends Fragment {
         return "N/A";
     }
 
-    private String extractPersonalId(String text) {
-        Pattern pattern = Pattern.compile("\\d{8}\\*{3}");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            return matcher.group(0);
-        }
-        return "N/A";
-    }
 
     private String extractExpiryDate(String text) {
         Pattern pattern = Pattern.compile("iki (\\d{4}\\.\\d{2}\\.\\d{2})");
@@ -194,21 +182,19 @@ public class UpdateFishingLicenseFragment extends Fragment {
         licenseNumberEditText.setVisibility(visibility);
         nameEditText.setVisibility(visibility);
         surnameEditText.setVisibility(visibility);
-        personalIdEditText.setVisibility(visibility);
         expiryDateEditText.setVisibility(visibility);
         saveButton.setVisibility(visibility);
         if (licenseNumberEditText.getParent() != null) {
             ((View) licenseNumberEditText.getParent()).requestLayout();
         }    }
 
-    private void saveLicenseData(String licenseNumber, String name, String surname, String personalId, String expiryDate) {
+    private void saveLicenseData(String licenseNumber, String name, String surname, String expiryDate) {
         JSONObject requestBody = new JSONObject();
         try {
             requestBody.put("UserID", lambdaHelper.getUserId());
             requestBody.put("LicenseNumber", licenseNumber);
             requestBody.put("Name", name);
             requestBody.put("Surname", surname);
-            requestBody.put("PersonalID", personalId);
             requestBody.put("ExpiryDate", expiryDate);
         } catch (JSONException e) {
             Log.e(TAG, "Error creating JSON request: " + e.getMessage(), e);

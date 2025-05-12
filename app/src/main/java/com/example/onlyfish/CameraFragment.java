@@ -202,14 +202,13 @@ public class CameraFragment extends Fragment {
     private void handleGalleryResult(Uri uri) {
         if (uri != null) {
             Log.d(TAG, "Image selected from gallery: " + uri);
-            handleCapturedImage(uri); // Call new method
+            handleCapturedImage(uri);
         } else {
             Log.e(TAG, "No image selected from gallery");
-            // Handle the case where no image was selected (optional)
         }
     }
 
-    private void handleCapturedImage(Uri imageUri) { // New method
+    private void handleCapturedImage(Uri imageUri) {
         Log.d(TAG, "Image captured or selected: " + imageUri);
         sendImageToAWS(imageUri);
     }
@@ -224,6 +223,7 @@ public class CameraFragment extends Fragment {
             @Override
             public void onResponse(String response) {
                 Log.d(TAG, "GET_FISH_RULES response: " + response);
+                Toast.makeText(requireContext(), "Lambda Response: " + response, Toast.LENGTH_LONG).show();
                 try {
                     JSONObject jsonObject = new JSONObject(response);
                     if (jsonObject.length() > 0) {
@@ -266,18 +266,38 @@ public class CameraFragment extends Fragment {
     private byte[] convertImageUriToByteArray(Uri imageUri) {
         try {
             InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri);
-            ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
-            int bufferSize = 1024;
-            byte[] buffer = new byte[bufferSize];
-
-            int len;
-            while ((len = inputStream.read(buffer)) != -1) {
-                byteBuffer.write(buffer, 0, len);
+            if (inputStream == null) {
+                Log.e(TAG, "Error converting image to byte array: InputStream is null");
+                return null;
             }
-            inputStream.close();
+
+            // Decode the image into a Bitmap
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            inputStream.close(); // Close the input stream after decoding
+
+            if (bitmap == null) {
+                Log.e(TAG, "Error converting image to byte array: Bitmap decoding failed");
+                return null;
+            }
+
+            ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+
+            // Compress the bitmap (adjust quality as needed, 80 is a good starting point)
+            // You can experiment with the quality value (0-100)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteBuffer);
+
+            // Recycle the bitmap to free up memory
+            bitmap.recycle();
+
             return byteBuffer.toByteArray();
         } catch (IOException e) {
             Log.e(TAG, "Error converting image to byte array: " + e.getMessage(), e);
+            return null;
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security error accessing image URI: " + e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error converting image to byte array: " + e.getMessage(), e);
             return null;
         }
     }

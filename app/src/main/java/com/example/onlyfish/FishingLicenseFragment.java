@@ -24,7 +24,6 @@ public class FishingLicenseFragment extends Fragment {
     private TextView licenseNumberTextView;
     private TextView nameTextView;
     private TextView surnameTextView;
-    private TextView personalIdTextView;
     private TextView expiryDateTextView;
     private Button updateLicenseButton;
     private Button homeButton;
@@ -41,7 +40,6 @@ public class FishingLicenseFragment extends Fragment {
         licenseNumberTextView = view.findViewById(R.id.license_number_text_view);
         nameTextView = view.findViewById(R.id.name_text_view);
         surnameTextView = view.findViewById(R.id.surname_text_view);
-        personalIdTextView = view.findViewById(R.id.personal_id_text_view);
         expiryDateTextView = view.findViewById(R.id.expiry_date_text_view);
         updateLicenseButton = view.findViewById(R.id.update_license_button);
         homeButton = view.findViewById(R.id.home_button);
@@ -78,13 +76,12 @@ public class FishingLicenseFragment extends Fragment {
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     // Check if the response has the expected keys
-                    if (jsonResponse.has("LicenseNumber") && jsonResponse.has("Name") && jsonResponse.has("Surname") && jsonResponse.has("PersonalID") && jsonResponse.has("ExpiryDate")) {
+                    if (jsonResponse.has("LicenseNumber") && jsonResponse.has("Name") && jsonResponse.has("Surname") && jsonResponse.has("ExpiryDate")) {
                         String licenseNumber = jsonResponse.getString("LicenseNumber");
                         String name = jsonResponse.getString("Name");
                         String surname = jsonResponse.getString("Surname");
-                        String personalId = jsonResponse.getString("PersonalID");
                         String expiryDate = jsonResponse.getString("ExpiryDate");
-                        displayLicenseInfo(licenseNumber, name, surname, personalId, expiryDate);
+                        displayLicenseInfo(licenseNumber, name, surname, expiryDate);
                     } else {
                         Log.e(TAG, "Invalid response format: missing required keys");
                         Toast.makeText(getContext(), "Error: Invalid response format", Toast.LENGTH_SHORT).show();
@@ -103,16 +100,14 @@ public class FishingLicenseFragment extends Fragment {
         });
     }
 
-    private void displayLicenseInfo(String licenseNumber, String name, String surname, String personalId, String expiryDate) {
+    private void displayLicenseInfo(String licenseNumber, String name, String surname, String expiryDate) {
         licenseNumberTextView.setText("License Number: " + licenseNumber);
         nameTextView.setText("Name: " + name);
         surnameTextView.setText("Surname: " + surname);
-        personalIdTextView.setText("Personal ID: " + personalId);
         expiryDateTextView.setText("Expiry Date: " + expiryDate);
         licenseNumberTextView.setVisibility(View.VISIBLE);
         nameTextView.setVisibility(View.VISIBLE);
         surnameTextView.setVisibility(View.VISIBLE);
-        personalIdTextView.setVisibility(View.VISIBLE);
         expiryDateTextView.setVisibility(View.VISIBLE);
         updateLicenseButton.setVisibility(View.VISIBLE);
         addLicenseButton.setVisibility(View.GONE);
@@ -122,7 +117,6 @@ public class FishingLicenseFragment extends Fragment {
         licenseNumberTextView.setVisibility(View.GONE);
         nameTextView.setVisibility(View.GONE);
         surnameTextView.setVisibility(View.GONE);
-        personalIdTextView.setVisibility(View.GONE);
         expiryDateTextView.setVisibility(View.GONE);
         updateLicenseButton.setVisibility(View.GONE);
         addLicenseButton.setVisibility(View.VISIBLE);

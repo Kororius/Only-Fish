@@ -32,14 +32,6 @@
         android:layout_marginBottom="8dp"
         android:visibility="gone"/>
 
-    <TextView
-        android:id="@+id/personal_id_text_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Personal ID: N/A"
-        android:textSize="18sp"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/expiry_date_text_view"
